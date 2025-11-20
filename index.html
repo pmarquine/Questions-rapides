@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Questions rapides – Accueil</title>
+<link rel="stylesheet" href="style.css">
+<style>
+:root{--bg:#000;--panel:#121212;--border:#2a2a2a;--text:#f5f5f5;--accent:#c4ffd1;--muted:#9aa3a2;--chip:#1c1c1c;--chip-border:#2a2a2a;--chip-hover:#232323;--bad:#d9534f;--good:#2ecc71}
+*{box-sizing:border-box}html,body{height:100%}
+@font-face{font-family:"Little Days Embedded";src:local("Little Days");font-display:swap}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Little Days Embedded","Comic Sans MS","Segoe UI",system-ui,Arial,sans-serif;line-height:1.5}
+h1{text-align:center;font-size:clamp(26px,3.6vw,40px);margin:24px 12px 16px;text-shadow:0 0 8px rgba(196,255,209,.35);letter-spacing:.5px}
+.toolbar{max-width:1100px;margin:0 auto 20px;padding:10px 12px}
+details.options{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+details.options summary{list-style:none;padding:14px 16px;cursor:pointer;display:flex;gap:10px;align-items:center;font-weight:600}
+details.options[open] summary{border-bottom:1px solid var(--border)}
+.opts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;padding:14px}
+.btn{background:var(--chip);border:1px solid var(--chip-border);color:var(--text);padding:10px 12px;border-radius:12px;cursor:pointer;text-align:center;transition:.15s}
+.btn:hover{background:var(--chip-hover)}
+.hidden{display:none}
+.note{max-width:1100px;margin:12px auto 0;color:var(--muted);font-size:.92rem;text-align:center}
+.classes{max-width:1100px;margin:10px auto 60px;display:flex;flex-wrap:wrap;gap:14px;justify-content:center}
+.class-chip{background:var(--chip);border:1px solid var(--chip-border);padding:12px 18px;border-radius:14px;cursor:pointer;transition:.15s;font-weight:600;min-width:120px;text-align:center;color:var(--text);text-decoration:none}
+.class-chip:hover{background:var(--chip-hover)}
+.manager{padding:14px;border-top:1px dashed var(--border);background:#0f0f0f}
+.manager h3{margin:4px 0 10px;font-size:18px}
+.row{display:grid;grid-template-columns:1fr 110px 320px;gap:8px;align-items:center;margin-bottom:8px}
+.row.header{color:var(--muted);font-weight:700}
+input[type=text], select{background:#151515;border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+.btn.small{padding:8px 10px;border-radius:10px;font-size:14px}
+.btn.danger{border-color:#3a1e1e;background:#221111}
+.btn.danger:hover{background:#2b1515}
+.btn.warn{border-color:#3a2a1e;background:#222011}
+.btn.warn:hover{background:#302612}
+.info{color:var(--muted);font-size:.85rem;margin:6px 0 0}
+.sep{height:1px;background:var(--border);margin:10px 0}
+</style>
+
+<!-- Firebase (version compat, plus simple avec ce script) -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+</head>
+<body>
+  <h1>Questions rapides – Accueil</h1>
+
+  <div class="toolbar">
+    <details class="options" open>
+      <summary>⚙️ Options</summary>
+      <div class="opts-grid">
+        <div>
+          <button class="btn" id="btnAddPdfs">➕ Ajouter des PDF</button>
+          <input id="fileAdd" type="file" accept=".pdf" multiple class="hidden">
+        </div>
+        <div>
+          <button class="btn" id="btnScan">🔍 Scanner les PDF (compter les pages)</button>
+          <input id="fileScan" type="file" accept=".pdf" multiple class="hidden">
+        </div>
+        <div>
+          <button class="btn" id="btnResetAll">🧹 Effacer coloriages — toutes classes</button>
+        </div>
+
+        <!-- Sauvegardes locales -->
+        <div>
+          <button class="btn" id="btnBackup">💾 Sauvegarder (téléchargement)</button>
+        </div>
+        <div>
+          <button class="btn" id="btnFSActivate">🔓 Activer sauvegarde directe</button>
+          <button class="btn" id="btnFSBackup">💾 Sauvegarder (écraser)</button>
+        </div>
+        <div>
+          <button class="btn" id="btnRestore">📥 Restaurer une sauvegarde</button>
+          <input id="fileRestore" type="file" accept=".json" class="hidden">
+        </div>
+
+        <!-- Lien vers le guide -->
+        <div>
+          <a class="btn" href="aide.html" target="_blank">ℹ️ Guide d’utilisation</a>
+        </div>
+      </div>
+
+      <div class="note">
+        Astuce : nomme les fichiers ainsi : <code>Titre (6 5 4).pdf</code><br>
+        L’ouverture utilise <code>#page=</code> (hors ligne ok).
+      </div>
+
+      <div class="manager" id="manager">
+        <h3>👥 Gérer les classes</h3>
+        <div class="row header"><div>Nom</div><div>Niveau</div><div>Actions</div></div>
+        <div id="rows"></div>
+        <div class="sep"></div>
+        <div class="row">
+          <input type="text" id="newName" placeholder="Ex : 5ABI">
+          <select id="newLevel">
+            <option value="">— niveau —</option>
+            <option value="6">6e</option>
+            <option value="5">5e</option>
+            <option value="4">4e</option>
+            <option value="3">3e</option>
+          </select>
+          <div class="actions">
+            <button class="btn small" id="btnAdd">➕ Ajouter</button>
+            <button class="btn small" id="btnClear">↺ Vider</button>
+          </div>
+        </div>
+        <div class="info">Jusqu’à 20 classes. Réglages mémorisés localement et dans le cloud.</div>
+      </div>
+    </details>
+  </div>
+
+  <div class="note">Choisis ta classe :</div>
+  <div class="classes" id="classes"></div>
+
+<script>
+// === Firebase : configuration cloud ===
+// ⚠️ À REMPLACER par la config exacte donnée par Firebase
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCXjYNdPZqQBEnswEo5yIHWjgFBwIpkYBY",
+  authDomain: "questions-rapides.firebaseapp.com",
+  databaseURL: "https://questions-rapides-default-rtdb.firebaseio.com",
+  projectId: "questions-rapides",
+  storageBucket: "questions-rapides.firebasestorage.app",
+  messagingSenderId: "510854193536",
+  appId: "1:510854193536:web:80857ccb52e8d695e02165",
+  measurementId: "G-7NEPYDJ1Z0"
+};
+
+
+// Initialise Firebase
+firebase.initializeApp(firebaseConfig);
+
+// Identifiant prof partagé entre tes appareils
+const PROF_ID = "pmarquine"; // change si tu veux, mais garde la même valeur partout
+
+// Racine des données dans la base
+const dbRoot = firebase.database().ref("qrData/" + PROF_ID);
+
+// === Gestion du stockage ===
+const STORAGE_PDFS="qr_pdfs_index_v3", STORAGE_CLASSES="qr_classes_v3";
+const FS_DB_NAME='qr_fs_db', FS_STORE='handles', FS_KEY='backupHandle';
+const $=s=>document.querySelector(s);
+function load(k,f){try{const v=localStorage.getItem(k);return v?JSON.parse(v):f}catch(e){return f}}
+function save(k,v){localStorage.setItem(k,JSON.stringify(v))}
+
+// === IDB helpers pour stocker le FileSystemFileHandle ===
+function idbOpen(){
+  return new Promise((res,rej)=>{
+    const req = indexedDB.open(FS_DB_NAME,1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if(!db.objectStoreNames.contains(FS_STORE)){
+        db.createObjectStore(FS_STORE);
+      }
+    };
+    req.onsuccess = ()=>res(req.result);
+    req.onerror = ()=>rej(req.error);
+  });
+}
+async function idbSet(key,val){
+  const db=await idbOpen();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(FS_STORE,'readwrite');
+    tx.objectStore(FS_STORE).put(val,key);
+    tx.oncomplete=()=>res();
+    tx.onerror=()=>rej(tx.error);
+  });
+}
+async function idbGet(key){
+  const db=await idbOpen();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(FS_STORE,'readonly');
+    const req=tx.objectStore(FS_STORE).get(key);
+    req.onsuccess=()=>res(req.result||null);
+    req.onerror=()=>rej(req.error);
+  });
+}
+async function idbDel(key){
+  const db=await idbOpen();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(FS_STORE,'readwrite');
+    tx.objectStore(FS_STORE).delete(key);
+    tx.oncomplete=()=>res();
+    tx.onerror=()=>rej(tx.error);
+  });
+}
+
+// === Classes par défaut ===
+function ensureDefaults(){
+  let arr = load(STORAGE_CLASSES,null);
+  if(!arr){
+    arr=[{name:"5ABI",level:5},{name:"5J",level:5},{name:"4B",level:4},{name:"4J",level:4},{name:"3D",level:3},{name:"3I",level:3}];
+    save(STORAGE_CLASSES,arr);
+  }
+  return arr;
+}
+function renderClassChips(){
+  const wrap=$("#classes"); wrap.innerHTML="";
+  const classes = ensureDefaults();
+  for(const c of classes){
+    const a=document.createElement("a");
+    a.className="class-chip";
+    a.href=`classe.html?c=${encodeURIComponent(c.name)}&lv=${c.level||""}`;
+    a.textContent=c.name;
+    wrap.appendChild(a);
+  }
+}
+function resetClassColoring(name){
+  const prefix="qr_state_v3_"+encodeURIComponent(name)+"_";
+  for(const k of Object.keys(localStorage)){
+    if(k.startsWith(prefix)) localStorage.removeItem(k);
+  }
+}
+function renderManager(){
+  const rows=$("#rows"); rows.innerHTML="";
+  const classes = ensureDefaults();
+  classes.forEach((c,idx)=>{
+    const row=document.createElement("div"); row.className="row";
+    const name=document.createElement("input"); name.type="text"; name.value=c.name;
+    const level=document.createElement("select");
+    level.innerHTML=`<option value="">—</option><option value="6">6e</option><option value="5">5e</option><option value="4">4e</option><option value="3">3e</option>`;
+    if([6,5,4,3].includes(c.level)) level.value=String(c.level);
+
+    const acts=document.createElement("div"); acts.className="actions";
+    const bSave=document.createElement("button"); bSave.className="btn small"; bSave.textContent="💾 Enregistrer";
+    bSave.onclick=()=>{
+      const arr=ensureDefaults();
+      const newName=name.value.trim()||c.name;
+      if(newName!==c.name){
+        const oldPref="qr_state_v3_"+encodeURIComponent(c.name)+"_";
+        const newPref="qr_state_v3_"+encodeURIComponent(newName)+"_";
+        for(const k of Object.keys(localStorage)){
+          if(k.startsWith(oldPref)){
+            const v=localStorage.getItem(k);
+            localStorage.removeItem(k);
+            const newKey = newPref + k.slice(oldPref.length);
+            localStorage.setItem(newKey, v);
+          }
+        }
+      }
+      arr[idx]={name:newName,level:level.value?parseInt(level.value,10):null};
+      save(STORAGE_CLASSES,arr);
+      renderManager();
+      renderClassChips();
+      cloudSaveAll(); // sync cloud après modif de classe
+    };
+
+    const bClr=document.createElement("button"); bClr.className="btn small warn"; bClr.textContent="🧹 Effacer coloriages";
+    bClr.onclick=()=>{
+      if(confirm(`Effacer les coloriages pour ${c.name} ?`)){
+        resetClassColoring(c.name);
+        alert(`Coloriages effacés pour ${c.name}.`);
+        cloudSaveAll();
+      }
+    };
+
+    const bDel=document.createElement("button"); bDel.className="btn small danger"; bDel.textContent="🗑️ Supprimer";
+    bDel.onclick=()=>{
+      const arr=ensureDefaults();
+      if(confirm(`Supprimer ${arr[idx].name} ? (les coloriages associés seront effacés)`)){
+        resetClassColoring(c.name);
+        arr.splice(idx,1);
+        save(STORAGE_CLASSES,arr);
+        renderManager();
+        renderClassChips();
+        cloudSaveAll();
+      }
+    };
+
+    acts.append(bSave,bClr,bDel);
+    row.append(name,level,acts);
+    rows.appendChild(row);
+  });
+
+  const arr=ensureDefaults();
+  document.getElementById("btnAdd").disabled = arr.length>=20;
+}
+
+// === Parse titre + niveaux depuis le nom de fichier ===
+function parseFromFilename(n){
+  const title = n.replace(/\s*\([^)]*\)\.pdf$/i,"").replace(/\.pdf$/i,"").trim();
+  const m = n.match(/\(([^)]+)\)\.pdf$/i);
+  let levels=[];
+  if(m){ levels=m[1].split(/\s+/).map(s=>parseInt(s,10)).filter(n=>[6,5,4,3].includes(n)); }
+  return { title, levels };
+}
+
+function mergePdfIndex(base, extra){
+  const map = new Map(base.map(x => [x.name, x]));
+  for (const e of extra){
+    if (map.has(e.name)){
+      const c = map.get(e.name);
+      // on garde l'ancien titre si on en avait un, sinon on prend le nouveau
+      c.title = c.title || e.title;
+
+      // 🔧 NOUVELLE RÈGLE :
+      // si on réimporte un PDF et que le nom donne des niveaux,
+      // on MET À JOUR les niveaux
+      if (e.levels && e.levels.length){
+        c.levels = e.levels;
+      }
+
+      // on complète les pages si elles manquent
+      if ((!c.pages || c.pages < 1) && e.pages){
+        c.pages = e.pages;
+      }
+    } else {
+      map.set(e.name, e);
+    }
+  }
+  return Array
+    .from(map.values())
+    .sort((a,b) => a.title.localeCompare(b.title,"fr"));
+}
+
+// === Ajouter / Scanner PDF ===
+document.getElementById("btnAddPdfs").onclick=()=>document.getElementById("fileAdd").click();
+document.getElementById("fileAdd").onchange=ev=>{
+  const files=[...(ev.target.files||[])]; if(!files.length) return;
+  const cur=load(STORAGE_PDFS,[]);
+  const extras=files.map(f=>({name:f.name,pages:null,...parseFromFilename(f.name)}));
+  save(STORAGE_PDFS, mergePdfIndex(cur,extras));
+  alert("PDF ajouté(s). (Scanner pour compter les pages si besoin)");
+  ev.target.value="";
+  cloudSaveAll(); // sync cloud après ajout de PDF
+};
+document.getElementById("btnScan").onclick=()=>document.getElementById("fileScan").click();
+document.getElementById("fileScan").onchange=async ev=>{
+  const files=[...(ev.target.files||[])]; if(!files.length) return;
+  const map=new Map(load(STORAGE_PDFS,[]).map(x=>[x.name,x]));
+  let updated=0, asked=0;
+  for(const f of files){
+    const buf=await f.arrayBuffer();
+    const txt=new TextDecoder("latin1").decode(buf);
+    const m=txt.match(/\/Type\s*\/Page\b/g);
+    let pages = m?.length || null;
+    const item=map.get(f.name)||{name:f.name,...parseFromFilename(f.name)};
+    if(!pages){
+      const man=prompt(`Impossible de compter automatiquement : ${f.name}\nNombre de pages ?`);
+      if(man){ const p=parseInt(man,10); if(p>0){item.pages=p;asked++;} }
+    } else { item.pages=pages; updated++; }
+    map.set(f.name,item);
+  }
+  save(STORAGE_PDFS, Array.from(map.values()));
+  alert(`Comptage terminé. Automatique : ${updated} — Saisi : ${asked}`);
+  ev.target.value="";
+  cloudSaveAll();
+};
+
+// === Assemblage des données à sauvegarder ===
+function makePayload(){
+  const classes = load(STORAGE_CLASSES,[]);
+  const pdfs = load(STORAGE_PDFS,[]);
+  const states = {};
+  for(const k of Object.keys(localStorage)){
+    if(k.startsWith("qr_state_v3_")){
+      states[k] = localStorage.getItem(k);
+    }
+  }
+  return {
+    meta: { app:"QuestionsRapides", version:3, savedAt:new Date().toISOString() },
+    classes, pdfs, states
+  };
+}
+
+
+
+// Ré-appliquer un payload (depuis fichier ou cloud)
+function applyPayload(data){
+  if(!data || !data.meta || data.meta.app!=="QuestionsRapides"){
+    alert("Données incompatibles.");
+    return;
+  }
+
+  if(Array.isArray(data.classes)) save(STORAGE_CLASSES, data.classes);
+  if(Array.isArray(data.pdfs))    save(STORAGE_PDFS, data.pdfs);
+
+  // ⚠️ On NE supprime plus tous les anciens états.
+  // On met simplement à jour ceux qui viennent du cloud.
+  if(data.states && typeof data.states==="object"){
+    for(const [k,v] of Object.entries(data.states)){
+      if(k.startsWith("qr_state_v3_")) localStorage.setItem(k, v);
+    }
+  }
+
+  renderManager();
+  renderClassChips();
+}
+
+
+// === Sauvegarde / chargement dans Firebase ===
+async function cloudSaveAll(){
+  const payload = makePayload();
+  try{
+    await dbRoot.set(payload);
+    console.log("Cloud save OK");
+  }catch(e){
+    console.error("Cloud save error", e);
+  }
+}
+
+async function cloudLoadAll(){
+  try{
+    const snap = await dbRoot.once("value");
+    if(!snap.exists()){
+      console.log("Aucune sauvegarde cloud pour l'instant.");
+      return;
+    }
+    const data = snap.val();
+    applyPayload(data);
+    console.log("Cloud load OK");
+  }catch(e){
+    console.error("Cloud load error", e);
+  }
+}
+
+// === Sauvegarde classique (téléchargement) ===
+document.getElementById("btnBackup").onclick=()=>{
+  const payload = makePayload();
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "QR_backup.json";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 0);
+};
+
+// === Sauvegarde directe (écraser le même fichier) ===
+let cachedHandle=null;
+async function getSavedHandle(){
+  try{ return await idbGet(FS_KEY); }catch{return null;}
+}
+async function setSavedHandle(h){
+  try{ await idbSet(FS_KEY,h); return true;}catch{return false;}
+}
+async function clearSavedHandle(){
+  try{ await idbDel(FS_KEY);}catch{}
+  cachedHandle=null;
+}
+document.getElementById("btnFSActivate").onclick=async ()=>{
+  if(!('showSaveFilePicker' in window)){
+    alert("Cette fonction nécessite Chrome/Edge et d'ouvrir la page via http(s) (ex: http://localhost).");
+    return;
+  }
+  try{
+    const handle = await window.showSaveFilePicker({
+      suggestedName: "QR_backup.json",
+      types: [{ description:"Fichier JSON", accept:{"application/json":[".json"]} }]
+    });
+    const perm = await handle.requestPermission({mode:"readwrite"});
+    if(perm!=="granted"){ alert("Permission refusée."); return; }
+    await setSavedHandle(handle);
+    cachedHandle = handle;
+    alert("Sauvegarde directe activée ✅ (le bouton 'Sauvegarder (écraser)' écrasera ce fichier).");
+  }catch(e){
+    console.warn(e);
+    alert("Activation annulée.");
+  }
+};
+document.getElementById("btnFSBackup").onclick=async ()=>{
+  if(!('showSaveFilePicker' in window)){
+    alert("Sauvegarde directe non disponible. Utilise 'Sauvegarder (téléchargement)'.");
+    return;
+  }
+  try{
+    if(!cachedHandle){ cachedHandle = await getSavedHandle(); }
+    if(!cachedHandle){
+      alert("Clique d'abord sur 'Activer sauvegarde directe' pour choisir le fichier à écraser.");
+      return;
+    }
+    let perm = await cachedHandle.queryPermission({mode:"readwrite"});
+    if(perm!=="granted"){ perm = await cachedHandle.requestPermission({mode:"readwrite"}); }
+    if(perm!=="granted"){ alert("Permission refusée."); return; }
+
+    const payload = makePayload();
+    const writable = await cachedHandle.createWritable();
+    await writable.write(JSON.stringify(payload,null,2));
+    await writable.close();
+    alert("Sauvegarde écrite ✅ (fichier écrasé).");
+  }catch(e){
+    console.error(e);
+    alert("Échec de la sauvegarde directe. Tu peux réactiver la sauvegarde ou utiliser le téléchargement.");
+    await clearSavedHandle();
+  }
+};
+
+// === Restaurer (import JSON) ===
+document.getElementById("btnRestore").onclick=()=>document.getElementById("fileRestore").click();
+document.getElementById("fileRestore").onchange=async ev=>{
+  const f = ev.target.files?.[0];
+  if(!f) return;
+  try{
+    const text = await f.text();
+    const data = JSON.parse(text);
+    applyPayload(data);
+    alert("Sauvegarde restaurée ✅");
+    cloudSaveAll(); // on pousse aussi vers le cloud
+  }catch(e){
+    console.error(e);
+    alert("Impossible de lire ce fichier de sauvegarde.");
+  }finally{
+    ev.target.value="";
+  }
+};
+
+// === Reset total ===
+document.getElementById("btnResetAll").onclick=()=>{
+  if(!confirm("Effacer TOUS les coloriages (toutes classes) ?")) return;
+  const arr=ensureDefaults();
+  for(const c of arr){
+    const prefix="qr_state_v3_"+encodeURIComponent(c.name)+"_";
+    for(const k of Object.keys(localStorage)){
+      if(k.startsWith(prefix)) localStorage.removeItem(k);
+    }
+  }
+  alert("Coloriages effacés pour toutes les classes.");
+  cloudSaveAll();
+};
+
+// === Manager add/clear ===
+document.getElementById("btnAdd").onclick=()=>{
+  const name=document.getElementById("newName").value.trim();
+  const lv=document.getElementById("newLevel").value?parseInt(document.getElementById("newLevel").value,10):null;
+  if(!name){alert("Nom de classe requis.");return;}
+  const arr=ensureDefaults();
+  if(arr.length>=20){alert("Limite de 20 classes atteinte.");return;}
+  if(arr.some(x=>x.name.toLowerCase()===name.toLowerCase())){alert("Cette classe existe déjà.");return;}
+  arr.push({name,level:lv});
+  save(STORAGE_CLASSES,arr);
+  document.getElementById("newName").value="";
+  document.getElementById("newLevel").value="";
+  renderManager();
+  renderClassChips();
+  cloudSaveAll();
+};
+document.getElementById("btnClear").onclick=()=>{
+  document.getElementById("newName").value="";
+  document.getElementById("newLevel").value="";
+};
+
+// === Init ===
+(async () =>{
+  // 1. On récupère d'abord ce qu'il y a dans le cloud
+  await cloudLoadAll();
+
+  // 2. On affiche la page d'accueil avec ce qu'on a en local
+  renderManager();
+  renderClassChips();
+
+  // 3. On renvoie vers le cloud l'état local (classes, pdfs, coloriages)
+  //    → ça pousse les dernières couleurs du PC dans Firebase
+  await cloudSaveAll();
+})();
+
+
+
+</script>
+</body>
+</html>

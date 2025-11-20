@@ -1,0 +1,183 @@
+/* === Police Little Days intégrée === */
+@font-face {
+  font-family: "LittleDays";
+  src: url("LittleDays.ttf") format("truetype");
+  font-display: swap;
+}
+
+/* === Fond ardoise général === */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #111 url("fond-ardoise.jpg") center / cover fixed no-repeat !important;
+  color: #f5f5f5;
+  font-family: "LittleDays", "Comic Sans MS", "Segoe UI", system-ui, Arial, sans-serif;
+  text-align: center;
+  padding-top: 80px;
+  text-shadow: 0 0 5px rgba(0,0,0,0.4);
+}
+
+/* titres / paragraphes : inchangés */
+h1 {
+  font-size: clamp(30px, 5vw, 60px);
+  margin-bottom: 20px;
+}
+p {
+  font-size: clamp(16px, 2.5vw, 22px);
+  max-width: 700px;
+  margin: 10px auto;
+}
+
+/* ========================= */
+/*   Encadrés transparents   */
+/* ========================= */
+
+/* Remplace les gros fonds noirs par un cadre fin + blur léger */
+details.options,
+.panel,
+.card {
+  background: transparent;                                  /* pas de fond opaque */
+  border: 2px solid rgba(255,255,255,0.22);                 /* fin encadré */
+  border-radius: 12px;
+  backdrop-filter: blur(2px);                               /* léger flou */
+  -webkit-backdrop-filter: blur(2px);                       /* Safari */
+  box-shadow: 0 0 10px rgba(0,0,0,0.25);
+}
+
+/* En-tête du <details> : une micro bande semi-transparente pour le titre */
+details.options summary {
+  list-style: none;
+  padding: 14px 16px;
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-weight: 600;
+  background: rgba(0,0,0,0.25);                             /* translucide */
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+details.options[open] summary {
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+/* Grille interne des options : pas de fond, juste un espacement propre */
+.opts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  padding: 14px;
+}
+
+/* Zone de gestion des classes : ligne pointillée, pas de fond */
+.manager {
+  padding: 14px;
+  background: transparent;
+  border-top: 1px dashed rgba(255,255,255,0.35);
+}
+
+/* Lignes de séparation fines et claires */
+.sep {
+  height: 1px;
+  background: rgba(255,255,255,0.25);
+  margin: 10px 0;
+}
+
+/* ========================= */
+/*         Boutons           */
+/* ========================= */
+
+.btn {
+  background: rgba(0,0,0,0.25);                             /* translucide */
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #f5f5f5;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background .2s, border-color .2s, transform .06s;
+}
+.btn:hover {
+  background: rgba(255,255,255,0.14);
+  border-color: rgba(255,255,255,0.35);
+}
+.btn:active { transform: translateY(1px); }
+
+.btn.small { padding: 8px 10px; font-size: 14px; }
+.btn.warn  { border-color: rgba(255,214,140,0.45); }
+.btn.danger{ border-color: rgba(255,140,140,0.45); }
+
+/* ========================= */
+/*     Entrées / Sélecteurs  */
+/* ========================= */
+
+input[type=text],
+select {
+  background: rgba(0,0,0,0.25);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #f5f5f5;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+/* ========================= */
+/*      Pastilles classes    */
+/* ========================= */
+
+.class-chip {
+  display: inline-block;
+  min-width: 120px;
+  padding: 12px 18px;
+  text-decoration: none;
+  font-weight: 600;
+  color: #f5f5f5;
+  background: rgba(0,0,0,0.25);                             /* translucide */
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 14px;
+  transition: background .2s, border-color .2s, transform .06s;
+  box-shadow: 0 0 6px rgba(0,0,0,0.25);
+}
+.class-chip:hover {
+  background: rgba(255,255,255,0.14);
+  border-color: rgba(255,255,255,0.35);
+}
+.class-chip:active { transform: translateY(1px); }
+
+/* ========================= */
+/*   Tableaux des questions  */
+/* ========================= */
+
+/* Conteneur scrollable : translucide, pas de gros fond opaque */
+.row-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 12px;
+  background: rgba(0,0,0,0.15);                             /* très léger film */
+}
+
+/* Cellules : fines bordures + survol clair, fond très discret */
+table { border-collapse: collapse; min-width: 1200px; margin: 0 auto; }
+td {
+  border-right: 1px solid rgba(255,255,255,0.15);
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  padding: 12px 10px;
+  text-align: center;
+  min-width: 54px;
+  background: rgba(0,0,0,0.08);                             /* léger, laisse voir l’ardoise */
+}
+a.q { color: #c4ffd1; text-decoration: none; font-weight: 700; }
+td.done { background: rgba(17, 43, 22, 0.7); }              /* vert translucide */
+td.done a.q { color: #2ecc71; }
+
+/* ========================= */
+/*   Textes secondaires      */
+/* ========================= */
+
+.note, .help {
+  color: #cfd7d6;
+  text-shadow: 0 0 3px rgba(0,0,0,0.35);
+}

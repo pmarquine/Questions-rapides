@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guide d’utilisation – Questions rapides</title>
+<link rel="stylesheet" href="style.css">
+<style>
+body{
+  background:#111 url("fond-ardoise.jpg") center/cover fixed no-repeat;
+  color:#f5f5f5;
+  font-family:"LittleDays","Comic Sans MS","Segoe UI",system-ui,Arial,sans-serif;
+  text-shadow:0 0 5px rgba(0,0,0,0.4);
+  line-height:1.6;
+  margin:0;
+  padding:0;
+}
+h1{text-align:center;font-size:clamp(30px,4vw,50px);margin:24px 0 10px;text-shadow:0 0 8px rgba(255,255,255,.4)}
+h2{margin-top:20px;text-shadow:0 0 6px rgba(255,255,255,.3)}
+.main{max-width:1000px;margin:0 auto;padding:20px 20px 60px;background:rgba(0,0,0,0.4);border-radius:14px;border:1px solid rgba(255,255,255,0.25)}
+.panel{background:transparent;border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:14px 20px;margin-bottom:16px;backdrop-filter:blur(2px)}
+.note{text-align:center;color:#d7d7d7;margin:8px 0 16px}
+ul{margin-left:24px}
+li{margin:6px 0}
+code{background:rgba(255,255,255,.15);padding:2px 6px;border-radius:6px}
+.badge{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);padding:2px 8px;border-radius:10px;font-weight:600;margin-right:6px}
+a.back{display:inline-block;margin:10px 0 20px;color:#c4ffd1;text-decoration:none;font-weight:600}
+a.back:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+  <div class="main">
+    <a href="index.html" class="back">⬅️ Retour à l’accueil</a>
+    <h1>Guide d’utilisation</h1>
+    <p class="note">Ce site fonctionne intégralement <strong>hors ligne</strong>.  
+    Place tous les fichiers (HTML, CSS, images, PDF…) dans le même dossier.</p>
+
+    <div class="panel">
+      <h2>1️⃣ Ajouter des PDF</h2>
+      <ul>
+        <li>Clique sur <span class="badge">➕ Ajouter des PDF</span> et choisis tes fichiers.</li>
+        <li>Nomme-les selon les niveaux concernés, par exemple : <code>Fractions (6 5 4).pdf</code>.</li>
+        <li>Le nom du fichier détermine automatiquement les classes où il apparaît.</li>
+      </ul>
+    </div>
+
+    <div class="panel">
+      <h2>2️⃣ Scanner les PDF</h2>
+      <ul>
+        <li>Clique sur <span class="badge">🔍 Scanner les PDF</span> pour compter les pages.</li>
+        <li>Le programme tente un comptage automatique ; sinon, tu entres le nombre manuellement.</li>
+        <li>Chaque page devient une question <strong>Q1 à Qn</strong> cliquable (jusqu’à 100 max).</li>
+      </ul>
+    </div>
+
+    <div class="panel">
+      <h2>3️⃣ Gérer les classes</h2>
+      <ul>
+        <li>Dans <strong>Options &gt; Gérer les classes</strong>, ajoute, renomme ou supprime tes classes.</li>
+        <li>Tu peux créer jusqu’à <strong>20 classes</strong> réparties sur les niveaux 6e, 5e, 4e, 3e.</li>
+        <li>Les coloriages verts (progression) sont enregistrés automatiquement dans ton navigateur.</li>
+      </ul>
+    </div>
+
+    <div class="panel">
+      <h2>4️⃣ Effacer les coloriages</h2>
+      <ul>
+        <li>Depuis le menu d’une classe : bouton <span class="badge">🧹 Effacer coloriages</span>.</li>
+        <li>Depuis la page d’accueil : <span class="badge">🧹 Effacer coloriages — toutes classes</span>.</li>
+        <li>Utile en début d’année pour remettre à zéro les suivis.</li>
+      </ul>
+    </div>
+
+    <div class="panel">
+      <h2>5️⃣ Sauvegarde et restauration</h2>
+      <ul>
+        <li><strong>Sauvegarder (téléchargement)</strong> crée un fichier <code>QR_backup.json</code> à conserver sur ta clé USB.</li>
+        <li><strong>Restaurer une sauvegarde</strong> recharge automatiquement tes PDF, classes et coloriages.</li>
+        <li>Fais-le en fin de journée avant de retirer ta clé.</li>
+      </ul>
+    </div>
+
+    <div class="panel">
+      <h2>6️⃣ Sauvegarde directe (optionnelle)</h2>
+      <ul>
+        <li>Disponible uniquement si le site est lancé via <code>http://localhost</code> (serveur local).</li>
+        <li>Permet d’écraser directement le fichier de sauvegarde sans créer de copies.</li>
+        <li>Étapes :
+          <ol>
+            <li>Lancer un petit serveur : <code>python -m http.server 8000</code></li>
+            <li>Ouvrir le site à l’adresse <code>http://localhost:8000</code></li>
+            <li>Cliquer sur <span class="badge">🔓 Activer sauvegarde directe</span> puis <span class="badge">💾 Sauvegarder (écraser)</span>.</li>
+          </ol>
+        </li>
+      </ul>
+    </div>
+
+    <div class="panel">
+      <h2>7️⃣ Astuces</h2>
+      <ul>
+        <li>Le fond ardoise et la police LittleDays sont intégrés — pas besoin d’installation.</li>
+        <li>Si tu ne vois plus les couleurs ou les boutons, fais <kbd>Ctrl</kbd> + <kbd>F5</kbd> pour rafraîchir sans cache.</li>
+        <li>Tu peux déplacer ce dossier entier sur une clé USB : tout fonctionnera hors ligne.</li>
+      </ul>
+    </div>
+
+    <p class="note">Créé pour les professeurs de mathématiques 👩‍🏫👨‍🏫 — utilisation libre et sans connexion.</p>
+  </div>
+</body>
+</html>
