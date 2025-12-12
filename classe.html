@@ -18,12 +18,7 @@ td.done{background:rgba(17,43,22,.7)}
 td.done a{color:#2ecc71}
 h2{text-align:center;margin:6px 0 10px}
 </style>
-
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 </head>
-
 <body>
   <a href="index.html" class="back-btn">⬅ Accueil</a>
   <div class="container">
@@ -32,108 +27,36 @@ h2{text-align:center;margin:6px 0 10px}
   </div>
 
 <script>
-// ======================================================================
-//  Firebase – configuration
-// ======================================================================
-const firebaseConfig = {
-  apiKey: "AIzaSyCXjYNdPZqQBEnswEo5yIHWjgFBwIpkYBY",
-  authDomain: "questions-rapides.firebaseapp.com",
-  databaseURL: "https://questions-rapides-default-rtdb.firebaseio.com",
-  projectId: "questions-rapides",
-  storageBucket: "questions-rapides.firebasestorage.app",
-  messagingSenderId: "510854193536",
-  appId: "1:510854193536:web:80857ccb52e8d695e02165",
-  measurementId: "G-7NEPYDJ1Z0"
-};
-
-firebase.initializeApp(firebaseConfig);
-
-// Même identifiant prof que dans index.html
-const PROF_ID = "pmarquine";
-const dbRoot = firebase.database().ref("qrData/" + PROF_ID);
-
-// ======================================================================
-//  Helpers
-// ======================================================================
+// ===== Utilitaires stockage =====
 const STORAGE_PDFS = "qr_pdfs_index_v3";
 const STORAGE_STATE_PREFIX = "qr_state_v3_";
+function load(k, def=[]) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch { return def; } }
 
-function load(k, def=[]) {
-  try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; }
-  catch { return def; }
-}
-
-// Clé sûre pour Firebase (pas de . # $ [ ])
-function safeFirebaseKey(str){
-  const cleaned = str.replace(/[.#$/\[\]]/g,"_");
-  return encodeURIComponent(cleaned);
-}
-
-// ======================================================================
-//  Lecture paramètres URL
-// ======================================================================
+// ===== Lecture des paramètres =====
 const params = new URLSearchParams(location.search);
 const CLASS_NAME = params.get("c") || "Classe";
 const LV_RAW = params.get("lv");
 const CLASS_LV = Number.isFinite(parseInt(LV_RAW,10)) ? parseInt(LV_RAW,10) : null;
-
 document.getElementById("classTitle").textContent = CLASS_NAME;
 
-// ======================================================================
-//  Déduction des niveaux depuis le nom de fichier
-// ======================================================================
+// ===== Déduction des niveaux depuis le nom du fichier =====
 function inferLevelsFromName(filename){
   const m = filename && filename.match(/\(([^)]+)\)\.pdf$/i);
   if(!m) return [];
   return m[1].split(/\s+/).map(s=>parseInt(s,10)).filter(n=>[6,5,4,3].includes(n));
 }
 
-// ======================================================================
-//  Chargement des PDFs
-// ======================================================================
-function loadPDFList(){
-  const all = load(STORAGE_PDFS, []);
+// ===== Chargement + filtre robuste =====
+const allPdfs = load(STORAGE_PDFS, []);
+const pdfs = allPdfs.filter(p => {
+  if (CLASS_LV === null) return true;
+  const lvArr = (p.levels && p.levels.length ? p.levels : inferLevelsFromName(p.name)) || [];
+  if (!lvArr.length) return true;
+  return lvArr.includes(CLASS_LV);
+});
 
-  return all.filter(p => {
-    if (CLASS_LV === null) return true;
-
-    const lvArr = (p.levels && p.levels.length ? p.levels : inferLevelsFromName(p.name)) || [];
-
-    if (!lvArr.length) return true;
-    return lvArr.includes(CLASS_LV);
-  });
-}
-
-// ======================================================================
-//  État cloud : chargement + sauvegarde d’un PDF
-// ======================================================================
-
-// Charge l’état d’un seul pdf dans cette classe
-async function cloudLoadPDFState(pdfName){
-  const key = STORAGE_STATE_PREFIX + CLASS_NAME + "_" + safeFirebaseKey(pdfName);
-  try{
-    const snap = await dbRoot.child("states").child(key).once("value");
-    return snap.exists() ? snap.val() : null;
-  }catch(e){
-    console.warn("Cloud load error:", e);
-    return null;
-  }
-}
-
-// Sauvegarde l’état d’un seul pdf dans le cloud
-async function cloudSavePDFState(pdfName, stateArray){
-  const key = STORAGE_STATE_PREFIX + CLASS_NAME + "_" + safeFirebaseKey(pdfName);
-  try{
-    await dbRoot.child("states").child(key).set(JSON.stringify(stateArray));
-  }catch(e){
-    console.warn("Cloud save error:", e);
-  }
-}
-
-// ======================================================================
-//  Construction d’un tableau pour un PDF
-// ======================================================================
-async function buildRow(pdf){
+// ===== Construction des lignes (jusqu’à 100 questions) =====
+function buildRow(pdf){
   const maxQ = Math.min(100, Math.max(1, pdf.pages || 100));
   const table = document.createElement("table");
   const tr = document.createElement("tr");
@@ -142,7 +65,10 @@ async function buildRow(pdf){
     const td = document.createElement("td");
     td.dataset.q = i;
     const a = document.createElement("a");
-    a.href = pdf.name + "#page=" + i;
+
+    // ✅ IMPORTANT iPad/Chrome : encode les espaces/parenthèses du nom de fichier
+    a.href = encodeURI(pdf.name) + "#page=" + i;
+
     a.target = "_blank";
     a.textContent = "Q" + i;
     td.appendChild(a);
@@ -150,24 +76,10 @@ async function buildRow(pdf){
   }
   table.appendChild(tr);
 
-  // --------------------- Charger l’état local -----------------------
-  const stateKey = STORAGE_STATE_PREFIX + CLASS_NAME + "_" + safeFirebaseKey(pdf.name);
+  const stateKey = STORAGE_STATE_PREFIX + CLASS_NAME + "_" + encodeURIComponent(pdf.name);
   let state = [];
   try{ state = JSON.parse(localStorage.getItem(stateKey)) || []; }catch{}
 
-  // --------------------- Charger l’état cloud -----------------------
-  const cloudStateStr = await cloudLoadPDFState(pdf.name);
-  if (cloudStateStr){
-    try{
-      const cloudState = JSON.parse(cloudStateStr);
-      if (Array.isArray(cloudState)){
-        state = cloudState;
-        localStorage.setItem(stateKey, JSON.stringify(state));
-      }
-    }catch{}
-  }
-
-  // --------------------- Appliquer le rendu -------------------------
   function apply(){
     for(let i=1;i<=maxQ;i++){
       const td = table.querySelector('td[data-q="'+i+'"]');
@@ -177,69 +89,43 @@ async function buildRow(pdf){
   }
   apply();
 
-  // --------------------- Gestion clic -------------------------------
-  table.addEventListener("click", async ev=>{
+  table.addEventListener("click", ev=>{
     const td = ev.target.closest("td[data-q]");
     if(!td) return;
-
     const q = parseInt(td.dataset.q,10);
     if(state.includes(q)) state = state.filter(x=>x!==q);
     else state.push(q);
-
-    // localStorage
     localStorage.setItem(stateKey, JSON.stringify(state));
     td.classList.toggle("done");
-
-    // Sauvegarde cloud
-    await cloudSavePDFState(pdf.name, state);
   });
 
   const wrap = document.createElement("div");
   wrap.className = "row-wrap";
   const title = document.createElement("h2");
-  title.textContent = pdf.title || pdf.name.replace(/\s*\([^)]*\)\.pdf$/i,'').replace(/\.pdf$/i,'');
+  title.textContent = pdf.title || (pdf.name ? pdf.name.replace(/\s*\([^)]*\)\.pdf$/i,'').replace(/\.pdf$/i,'') : "Sans titre");
   wrap.appendChild(title);
   wrap.appendChild(table);
   return wrap;
 }
 
-// ======================================================================
-//  Rendu de la page
-// ======================================================================
-async function render(){
-  const mount = document.getElementById("tableWrap");
-  const pdfs = loadPDFList();
-
-  if(!pdfs.length){
-    mount.innerHTML = "<p>Aucun PDF pour cette classe. Ajoute/scanne des PDF sur la page d’accueil.</p>";
-    return;
-  }
-
-  // Tri par titre
+// ===== Rendu =====
+const mount = document.getElementById("tableWrap");
+if(!pdfs.length){
+  mount.innerHTML = "<p>Aucun PDF pour cette classe. Ajoute/scanne des PDF sur la page d’accueil.</p>";
+} else {
   pdfs.sort((a,b)=> (a.title||"").localeCompare(b.title||"", "fr"));
-
-  // Regroupement par titre
   const byTitle = new Map();
   for(const p of pdfs){
-    const key = (p.title && p.title.trim())
-             || p.name.replace(/\s*\([^)]*\)\.pdf$/i,'').replace(/\.pdf$/i,'');
+    const key = (p.title && p.title.trim()) || (p.name ? p.name.replace(/\s*\([^)]*\)\.pdf$/i,'').replace(/\.pdf$/i,'') : "Sans titre");
     if(!byTitle.has(key)) byTitle.set(key, []);
     byTitle.get(key).push(p);
   }
-
-  // Rendu
   for(const [title,list] of byTitle.entries()){
     for(const pdf of list){
-      mount.appendChild(await buildRow(pdf));
+      mount.appendChild(buildRow(pdf));
     }
   }
 }
-
-// ======================================================================
-//  INIT
-// ======================================================================
-render();
-
 </script>
 </body>
 </html>
