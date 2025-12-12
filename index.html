@@ -36,10 +36,6 @@ input[type=text], select{background:#151515;border:1px solid var(--border);color
 .info{color:var(--muted);font-size:.85rem;margin:6px 0 0}
 .sep{height:1px;background:var(--border);margin:10px 0}
 </style>
-
-<!-- Firebase (version compat, plus simple avec ce script) -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 </head>
 <body>
   <h1>Questions rapides – Accueil</h1>
@@ -52,28 +48,29 @@ input[type=text], select{background:#151515;border:1px solid var(--border);color
           <button class="btn" id="btnAddPdfs">➕ Ajouter des PDF</button>
           <input id="fileAdd" type="file" accept=".pdf" multiple class="hidden">
         </div>
+
         <div>
           <button class="btn" id="btnScan">🔍 Scanner les PDF (compter les pages)</button>
           <input id="fileScan" type="file" accept=".pdf" multiple class="hidden">
         </div>
+
         <div>
           <button class="btn" id="btnResetAll">🧹 Effacer coloriages — toutes classes</button>
         </div>
 
-        <!-- Sauvegardes locales -->
         <div>
           <button class="btn" id="btnBackup">💾 Sauvegarder (téléchargement)</button>
         </div>
+
         <div>
-          <button class="btn" id="btnFSActivate">🔓 Activer sauvegarde directe</button>
-          <button class="btn" id="btnFSBackup">💾 Sauvegarder (écraser)</button>
+          <button class="btn" id="btnOverwrite">💾 Sauvegarder (écraser)</button>
         </div>
+
         <div>
           <button class="btn" id="btnRestore">📥 Restaurer une sauvegarde</button>
           <input id="fileRestore" type="file" accept=".json" class="hidden">
         </div>
 
-        <!-- Lien vers le guide -->
         <div>
           <a class="btn" href="aide.html" target="_blank">ℹ️ Guide d’utilisation</a>
         </div>
@@ -103,7 +100,7 @@ input[type=text], select{background:#151515;border:1px solid var(--border);color
             <button class="btn small" id="btnClear">↺ Vider</button>
           </div>
         </div>
-        <div class="info">Jusqu’à 20 classes. Réglages mémorisés localement et dans le cloud.</div>
+        <div class="info">Jusqu’à 20 classes. Réglages mémorisés localement.</div>
       </div>
     </details>
   </div>
@@ -112,78 +109,11 @@ input[type=text], select{background:#151515;border:1px solid var(--border);color
   <div class="classes" id="classes"></div>
 
 <script>
-// === Firebase : configuration cloud ===
-// ⚠️ À REMPLACER par la config exacte donnée par Firebase
-
-const firebaseConfig = {
-  apiKey: "AIzaSyCXjYNdPZqQBEnswEo5yIHWjgFBwIpkYBY",
-  authDomain: "questions-rapides.firebaseapp.com",
-  databaseURL: "https://questions-rapides-default-rtdb.firebaseio.com",
-  projectId: "questions-rapides",
-  storageBucket: "questions-rapides.firebasestorage.app",
-  messagingSenderId: "510854193536",
-  appId: "1:510854193536:web:80857ccb52e8d695e02165",
-  measurementId: "G-7NEPYDJ1Z0"
-};
-
-
-// Initialise Firebase
-firebase.initializeApp(firebaseConfig);
-
-// Identifiant prof partagé entre tes appareils
-const PROF_ID = "pmarquine"; // change si tu veux, mais garde la même valeur partout
-
-// Racine des données dans la base
-const dbRoot = firebase.database().ref("qrData/" + PROF_ID);
-
 // === Gestion du stockage ===
 const STORAGE_PDFS="qr_pdfs_index_v3", STORAGE_CLASSES="qr_classes_v3";
-const FS_DB_NAME='qr_fs_db', FS_STORE='handles', FS_KEY='backupHandle';
 const $=s=>document.querySelector(s);
 function load(k,f){try{const v=localStorage.getItem(k);return v?JSON.parse(v):f}catch(e){return f}}
 function save(k,v){localStorage.setItem(k,JSON.stringify(v))}
-
-// === IDB helpers pour stocker le FileSystemFileHandle ===
-function idbOpen(){
-  return new Promise((res,rej)=>{
-    const req = indexedDB.open(FS_DB_NAME,1);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if(!db.objectStoreNames.contains(FS_STORE)){
-        db.createObjectStore(FS_STORE);
-      }
-    };
-    req.onsuccess = ()=>res(req.result);
-    req.onerror = ()=>rej(req.error);
-  });
-}
-async function idbSet(key,val){
-  const db=await idbOpen();
-  return new Promise((res,rej)=>{
-    const tx=db.transaction(FS_STORE,'readwrite');
-    tx.objectStore(FS_STORE).put(val,key);
-    tx.oncomplete=()=>res();
-    tx.onerror=()=>rej(tx.error);
-  });
-}
-async function idbGet(key){
-  const db=await idbOpen();
-  return new Promise((res,rej)=>{
-    const tx=db.transaction(FS_STORE,'readonly');
-    const req=tx.objectStore(FS_STORE).get(key);
-    req.onsuccess=()=>res(req.result||null);
-    req.onerror=()=>rej(req.error);
-  });
-}
-async function idbDel(key){
-  const db=await idbOpen();
-  return new Promise((res,rej)=>{
-    const tx=db.transaction(FS_STORE,'readwrite');
-    tx.objectStore(FS_STORE).delete(key);
-    tx.oncomplete=()=>res();
-    tx.onerror=()=>rej(tx.error);
-  });
-}
 
 // === Classes par défaut ===
 function ensureDefaults(){
@@ -240,9 +170,7 @@ function renderManager(){
       }
       arr[idx]={name:newName,level:level.value?parseInt(level.value,10):null};
       save(STORAGE_CLASSES,arr);
-      renderManager();
-      renderClassChips();
-      cloudSaveAll(); // sync cloud après modif de classe
+      renderManager(); renderClassChips();
     };
 
     const bClr=document.createElement("button"); bClr.className="btn small warn"; bClr.textContent="🧹 Effacer coloriages";
@@ -250,7 +178,6 @@ function renderManager(){
       if(confirm(`Effacer les coloriages pour ${c.name} ?`)){
         resetClassColoring(c.name);
         alert(`Coloriages effacés pour ${c.name}.`);
-        cloudSaveAll();
       }
     };
 
@@ -261,9 +188,7 @@ function renderManager(){
         resetClassColoring(c.name);
         arr.splice(idx,1);
         save(STORAGE_CLASSES,arr);
-        renderManager();
-        renderClassChips();
-        cloudSaveAll();
+        renderManager(); renderClassChips();
       }
     };
 
@@ -284,33 +209,17 @@ function parseFromFilename(n){
   if(m){ levels=m[1].split(/\s+/).map(s=>parseInt(s,10)).filter(n=>[6,5,4,3].includes(n)); }
   return { title, levels };
 }
-
-function mergePdfIndex(base, extra){
-  const map = new Map(base.map(x => [x.name, x]));
-  for (const e of extra){
-    if (map.has(e.name)){
-      const c = map.get(e.name);
-      // on garde l'ancien titre si on en avait un, sinon on prend le nouveau
-      c.title = c.title || e.title;
-
-      // 🔧 NOUVELLE RÈGLE :
-      // si on réimporte un PDF et que le nom donne des niveaux,
-      // on MET À JOUR les niveaux
-      if (e.levels && e.levels.length){
-        c.levels = e.levels;
-      }
-
-      // on complète les pages si elles manquent
-      if ((!c.pages || c.pages < 1) && e.pages){
-        c.pages = e.pages;
-      }
-    } else {
-      map.set(e.name, e);
-    }
+function mergePdfIndex(base,extra){
+  const map=new Map(base.map(x=>[x.name,x]));
+  for(const e of extra){
+    if(map.has(e.name)){
+      const c=map.get(e.name);
+      c.title=c.title||e.title;
+      if(!c.levels?.length) c.levels=e.levels;
+      if((!c.pages||c.pages<1)&&e.pages) c.pages=e.pages;
+    } else map.set(e.name,e);
   }
-  return Array
-    .from(map.values())
-    .sort((a,b) => a.title.localeCompare(b.title,"fr"));
+  return Array.from(map.values()).sort((a,b)=>a.title.localeCompare(b.title,"fr"));
 }
 
 // === Ajouter / Scanner PDF ===
@@ -322,8 +231,8 @@ document.getElementById("fileAdd").onchange=ev=>{
   save(STORAGE_PDFS, mergePdfIndex(cur,extras));
   alert("PDF ajouté(s). (Scanner pour compter les pages si besoin)");
   ev.target.value="";
-  cloudSaveAll(); // sync cloud après ajout de PDF
 };
+
 document.getElementById("btnScan").onclick=()=>document.getElementById("fileScan").click();
 document.getElementById("fileScan").onchange=async ev=>{
   const files=[...(ev.target.files||[])]; if(!files.length) return;
@@ -344,7 +253,6 @@ document.getElementById("fileScan").onchange=async ev=>{
   save(STORAGE_PDFS, Array.from(map.values()));
   alert(`Comptage terminé. Automatique : ${updated} — Saisi : ${asked}`);
   ev.target.value="";
-  cloudSaveAll();
 };
 
 // === Assemblage des données à sauvegarder ===
@@ -363,127 +271,36 @@ function makePayload(){
   };
 }
 
-
-
-// Ré-appliquer un payload (depuis fichier ou cloud)
-function applyPayload(data){
-  if(!data || !data.meta || data.meta.app!=="QuestionsRapides"){
-    alert("Données incompatibles.");
-    return;
-  }
-
-  if(Array.isArray(data.classes)) save(STORAGE_CLASSES, data.classes);
-  if(Array.isArray(data.pdfs))    save(STORAGE_PDFS, data.pdfs);
-
-  // ⚠️ On NE supprime plus tous les anciens états.
-  // On met simplement à jour ceux qui viennent du cloud.
-  if(data.states && typeof data.states==="object"){
-    for(const [k,v] of Object.entries(data.states)){
-      if(k.startsWith("qr_state_v3_")) localStorage.setItem(k, v);
-    }
-  }
-
-  renderManager();
-  renderClassChips();
-}
-
-
-// === Sauvegarde / chargement dans Firebase ===
-async function cloudSaveAll(){
+// === Export iPad-friendly ===
+// Sur iPad/Chrome, on ne peut PAS écrire directement dans un fichier existant.
+// Donc : on partage / enregistre "QR_backup.json" et iPadOS propose "Remplacer".
+async function exportBackup(filename){
   const payload = makePayload();
-  try{
-    await dbRoot.set(payload);
-    console.log("Cloud save OK");
-  }catch(e){
-    console.error("Cloud save error", e);
-  }
-}
+  const json = JSON.stringify(payload,null,2);
 
-async function cloudLoadAll(){
   try{
-    const snap = await dbRoot.once("value");
-    if(!snap.exists()){
-      console.log("Aucune sauvegarde cloud pour l'instant.");
+    const file = new File([json], filename, {type:"application/json"});
+    if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({ files:[file], title: filename, text: "Sauvegarde Questions Rapides" });
       return;
     }
-    const data = snap.val();
-    applyPayload(data);
-    console.log("Cloud load OK");
   }catch(e){
-    console.error("Cloud load error", e);
+    // fallback ci-dessous
   }
-}
 
-// === Sauvegarde classique (téléchargement) ===
-document.getElementById("btnBackup").onclick=()=>{
-  const payload = makePayload();
-  const blob = new Blob([JSON.stringify(payload,null,2)], {type:"application/json"});
+  const blob = new Blob([json], {type:"application/json"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "QR_backup.json";
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 0);
-};
+}
 
-// === Sauvegarde directe (écraser le même fichier) ===
-let cachedHandle=null;
-async function getSavedHandle(){
-  try{ return await idbGet(FS_KEY); }catch{return null;}
-}
-async function setSavedHandle(h){
-  try{ await idbSet(FS_KEY,h); return true;}catch{return false;}
-}
-async function clearSavedHandle(){
-  try{ await idbDel(FS_KEY);}catch{}
-  cachedHandle=null;
-}
-document.getElementById("btnFSActivate").onclick=async ()=>{
-  if(!('showSaveFilePicker' in window)){
-    alert("Cette fonction nécessite Chrome/Edge et d'ouvrir la page via http(s) (ex: http://localhost).");
-    return;
-  }
-  try{
-    const handle = await window.showSaveFilePicker({
-      suggestedName: "QR_backup.json",
-      types: [{ description:"Fichier JSON", accept:{"application/json":[".json"]} }]
-    });
-    const perm = await handle.requestPermission({mode:"readwrite"});
-    if(perm!=="granted"){ alert("Permission refusée."); return; }
-    await setSavedHandle(handle);
-    cachedHandle = handle;
-    alert("Sauvegarde directe activée ✅ (le bouton 'Sauvegarder (écraser)' écrasera ce fichier).");
-  }catch(e){
-    console.warn(e);
-    alert("Activation annulée.");
-  }
-};
-document.getElementById("btnFSBackup").onclick=async ()=>{
-  if(!('showSaveFilePicker' in window)){
-    alert("Sauvegarde directe non disponible. Utilise 'Sauvegarder (téléchargement)'.");
-    return;
-  }
-  try{
-    if(!cachedHandle){ cachedHandle = await getSavedHandle(); }
-    if(!cachedHandle){
-      alert("Clique d'abord sur 'Activer sauvegarde directe' pour choisir le fichier à écraser.");
-      return;
-    }
-    let perm = await cachedHandle.queryPermission({mode:"readwrite"});
-    if(perm!=="granted"){ perm = await cachedHandle.requestPermission({mode:"readwrite"}); }
-    if(perm!=="granted"){ alert("Permission refusée."); return; }
-
-    const payload = makePayload();
-    const writable = await cachedHandle.createWritable();
-    await writable.write(JSON.stringify(payload,null,2));
-    await writable.close();
-    alert("Sauvegarde écrite ✅ (fichier écrasé).");
-  }catch(e){
-    console.error(e);
-    alert("Échec de la sauvegarde directe. Tu peux réactiver la sauvegarde ou utiliser le téléchargement.");
-    await clearSavedHandle();
-  }
-};
+// === Boutons sauvegarde ===
+document.getElementById("btnBackup").onclick = ()=> exportBackup("QR_backup.json");
+// "Écraser" = même nom + iPadOS propose Remplacer
+document.getElementById("btnOverwrite").onclick = ()=> exportBackup("QR_backup.json");
 
 // === Restaurer (import JSON) ===
 document.getElementById("btnRestore").onclick=()=>document.getElementById("fileRestore").click();
@@ -493,9 +310,22 @@ document.getElementById("fileRestore").onchange=async ev=>{
   try{
     const text = await f.text();
     const data = JSON.parse(text);
-    applyPayload(data);
+    if(!data || !data.meta || data.meta.app!=="QuestionsRapides"){
+      alert("Fichier incompatible.");
+      ev.target.value=""; return;
+    }
+    if(Array.isArray(data.classes)) save(STORAGE_CLASSES, data.classes);
+    if(Array.isArray(data.pdfs))    save(STORAGE_PDFS, data.pdfs);
+    for(const k of Object.keys(localStorage)){
+      if(k.startsWith("qr_state_v3_")) localStorage.removeItem(k);
+    }
+    if(data.states && typeof data.states==="object"){
+      for(const [k,v] of Object.entries(data.states)){
+        if(k.startsWith("qr_state_v3_")) localStorage.setItem(k, v);
+      }
+    }
     alert("Sauvegarde restaurée ✅");
-    cloudSaveAll(); // on pousse aussi vers le cloud
+    renderManager(); renderClassChips();
   }catch(e){
     console.error(e);
     alert("Impossible de lire ce fichier de sauvegarde.");
@@ -515,7 +345,6 @@ document.getElementById("btnResetAll").onclick=()=>{
     }
   }
   alert("Coloriages effacés pour toutes les classes.");
-  cloudSaveAll();
 };
 
 // === Manager add/clear ===
@@ -528,33 +357,13 @@ document.getElementById("btnAdd").onclick=()=>{
   if(arr.some(x=>x.name.toLowerCase()===name.toLowerCase())){alert("Cette classe existe déjà.");return;}
   arr.push({name,level:lv});
   save(STORAGE_CLASSES,arr);
-  document.getElementById("newName").value="";
-  document.getElementById("newLevel").value="";
-  renderManager();
-  renderClassChips();
-  cloudSaveAll();
+  document.getElementById("newName").value=""; document.getElementById("newLevel").value="";
+  renderManager(); renderClassChips();
 };
-document.getElementById("btnClear").onclick=()=>{
-  document.getElementById("newName").value="";
-  document.getElementById("newLevel").value="";
-};
+document.getElementById("btnClear").onclick=()=>{document.getElementById("newName").value=""; document.getElementById("newLevel").value="";};
 
 // === Init ===
-(async () =>{
-  // 1. On récupère d'abord ce qu'il y a dans le cloud
-  await cloudLoadAll();
-
-  // 2. On affiche la page d'accueil avec ce qu'on a en local
-  renderManager();
-  renderClassChips();
-
-  // 3. On renvoie vers le cloud l'état local (classes, pdfs, coloriages)
-  //    → ça pousse les dernières couleurs du PC dans Firebase
-  await cloudSaveAll();
-})();
-
-
-
+renderManager(); renderClassChips();
 </script>
 </body>
 </html>
