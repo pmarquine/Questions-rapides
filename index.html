@@ -55,15 +55,16 @@
   <div class="panel">
     <div class="grid">
       <button class="btn" id="btnRefreshPdfs">🔄 Actualiser la liste des PDF (GitHub)</button>
-      <button class="btn" id="btnRestoreGitHub">🔄 Restaurer depuis GitHub</button>
+      <button class="btn" id="btnRestoreGitHub">🔄 Restaurer sauvegarde (GitHub)</button>
       <button class="btn" id="btnBackup">💾 Sauvegarder (JSON)</button>
       <button class="btn warn" id="btnResetAll">🧹 Effacer coloriages (tout)</button>
       <a class="btn" href="aide.html" target="_blank">ℹ️ Aide</a>
     </div>
 
     <div class="note">
-      Les PDF doivent être dans le dossier <code>pdf/</code> du dépôt + référencés dans <code>pdfs.json</code>.<br>
-      Tri automatique par niveau via le suffixe : <code>(5 4)</code>, <code>(3)</code>, etc.
+      PDFs : dossier <code>pdf/</code> + liste <code>pdfs.json</code>.<br>
+      Sauvegarde : <code>QR_backup.json</code> (à la racine du dépôt).<br>
+      Tri auto par niveau via le suffixe : <code>(5 4)</code>, <code>(3)</code>, etc.
     </div>
 
     <details open>
@@ -278,7 +279,6 @@ async function refreshPdfsFromGitHub(){
     alert("Impossible de charger pdfs.json.\nVérifie qu’il est à la racine du dépôt et que le JSON est valide.");
   }
 }
-
 $("#btnRefreshPdfs").onclick = refreshPdfsFromGitHub;
 
 /* ======================
@@ -313,9 +313,10 @@ $("#btnBackup").onclick = ()=>{
 
 /* ======================
    Restaurer depuis GitHub (QR_backup.json)
+   => PAS de sélecteur Fichiers
 ====================== */
 $("#btnRestoreGitHub").onclick = async ()=>{
-  if(!confirm("Restaurer depuis GitHub ?\nLes données locales seront remplacées.")) return;
+  if(!confirm("Restaurer la sauvegarde depuis GitHub ?\nLes données locales seront remplacées.")) return;
 
   try{
     const res = await fetch("./QR_backup.json?ts=" + Date.now(), { cache:"no-store" });
@@ -344,7 +345,7 @@ $("#btnRestoreGitHub").onclick = async ()=>{
     renderClassChips();
   }catch(e){
     console.error(e);
-    alert("Impossible de restaurer depuis GitHub.\nVérifie QR_backup.json à la racine du dépôt.");
+    alert("Impossible de restaurer depuis GitHub.\nVérifie que QR_backup.json est à la racine du dépôt GitHub Pages.");
   }
 };
 
