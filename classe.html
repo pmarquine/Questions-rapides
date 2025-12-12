@@ -10,22 +10,14 @@
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
   .top{display:flex;align-items:center;gap:10px;padding:14px}
-  a.back{
-    background:#1b1b1b;border:1px solid var(--border);color:var(--text);text-decoration:none;
-    padding:10px 14px;border-radius:12px;font-weight:700
-  }
-  a.back:hover{background:#232323}
+  a.back{background:#1b1b1b;border:1px solid var(--border);color:var(--text);text-decoration:none;padding:10px 14px;border-radius:12px;font-weight:700}
   h1{margin:0 auto 0 0;font-size:clamp(22px,3.2vw,36px)}
   .wrap{max-width:1200px;margin:0 auto;padding:12px}
   .block{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:12px;margin:12px 0}
   h2{margin:6px 0 10px;text-align:center;font-size:18px;color:var(--muted);font-weight:800}
   .tableWrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px;padding:10px;background:#0b0b0b}
   table{border-collapse:collapse;min-width:1600px;margin:0 auto}
-  td{
-    border-right:1px solid rgba(255,255,255,.18);
-    border-bottom:1px solid rgba(255,255,255,.18);
-    padding:10px;min-width:54px;text-align:center;background:rgba(255,255,255,.03)
-  }
+  td{border-right:1px solid rgba(255,255,255,.18);border-bottom:1px solid rgba(255,255,255,.18);padding:10px;min-width:54px;text-align:center;background:rgba(255,255,255,.03)}
   td.done{background:rgba(30,120,60,.35)}
   a.q{color:#c4ffd1;text-decoration:none;font-weight:900}
   td.done a.q{color:#2ecc71}
@@ -42,7 +34,6 @@
   <div class="wrap" id="mount"></div>
 
 <script>
-/* ====== Stockage (v3) ====== */
 const STORAGE_PDFS = "qr_pdfs_index_v3";
 const STATE_PREFIX = "qr_state_v3_";
 
@@ -54,73 +45,60 @@ const LV_RAW = params.get("lv");
 const CLASS_LV = (LV_RAW && ["6","5","4","3"].includes(LV_RAW)) ? parseInt(LV_RAW,10) : null;
 document.getElementById("title").textContent = CLASS_NAME + (CLASS_LV ? ` (${CLASS_LV}e)` : "");
 
-/* Parser niveaux depuis nom */
 function inferLevelsFromFilename(filename){
   const m = filename.match(/\(([^)]+)\)\.pdf$/i);
   if(!m) return [];
-  return m[1]
-    .trim()
-    .split(/\s+/)
-    .map(x=>parseInt(x,10))
-    .filter(n=>[6,5,4,3].includes(n));
+  return m[1].trim().split(/\s+/).map(x=>parseInt(x,10)).filter(n=>[6,5,4,3].includes(n));
 }
-
 function prettyTitle(p){
-  return (p.title && p.title.trim())
-    ? p.title.trim()
-    : (p.name || "")
-        .replace(/\s*\([^)]*\)\.pdf$/i,"")
-        .replace(/\.pdf$/i,"")
-        .trim();
+  return (p.title && p.title.trim()) ? p.title.trim()
+    : (p.name||"").replace(/\s*\([^)]*\)\.pdf$/i,"").replace(/\.pdf$/i,"").trim();
 }
 
-/* Filtre automatique des PDF selon le niveau de la classe */
+/* Filtre auto par niveau de classe */
 const allPdfs = load(STORAGE_PDFS, []);
 const pdfs = allPdfs.filter(p=>{
-  if(CLASS_LV === null) return true;                 // classe sans niveau => tout
+  if(CLASS_LV === null) return true;
   const lv = (p.levels && p.levels.length) ? p.levels : inferLevelsFromFilename(p.name||"");
-  if(!lv.length) return true;                        // pas de (..)-> tout
-  return lv.includes(CLASS_LV);                      // ex (5 4) => 5e et 4e
+  if(!lv.length) return true;
+  return lv.includes(CLASS_LV);
 });
 
 function buildForPdf(p){
-  const container = document.createElement("div");
-  container.className = "block";
+  const container=document.createElement("div");
+  container.className="block";
 
-  const h2 = document.createElement("h2");
-  h2.textContent = prettyTitle(p);
+  const h2=document.createElement("h2");
+  h2.textContent=prettyTitle(p);
   container.appendChild(h2);
 
-  const tableWrap = document.createElement("div");
-  tableWrap.className = "tableWrap";
+  const tableWrap=document.createElement("div");
+  tableWrap.className="tableWrap";
 
-  const table = document.createElement("table");
-  const tr = document.createElement("tr");
+  const table=document.createElement("table");
+  const tr=document.createElement("tr");
 
-  const maxQ = Math.min(100, Math.max(1, p.pages || 100));
+  const maxQ=Math.min(100, Math.max(1, p.pages || 100));
+  const stateKey = STATE_PREFIX + encodeURIComponent(CLASS_NAME) + "_" + encodeURIComponent(p.name||"");
 
-  // clé d'état (nom du PDF encodé dans la clé, stable même avec accents)
-  const stateKey = STATE_PREFIX + encodeURIComponent(CLASS_NAME) + "_" + encodeURIComponent(p.name || "");
-  let state = [];
+  let state=[];
   try{ state = JSON.parse(localStorage.getItem(stateKey) || "[]") || []; }catch{ state=[]; }
 
   for(let i=1;i<=maxQ;i++){
-    const td = document.createElement("td");
+    const td=document.createElement("td");
     if(state.includes(i)) td.classList.add("done");
 
-    const a = document.createElement("a");
-    a.className = "q";
-    // GitHub Pages : lien relatif robuste + encodage
-    a.href = "./" + encodeURI(p.name || "") + "#page=" + i;
-    a.target = "_blank";
-    a.textContent = "Q" + i;
+    const a=document.createElement("a");
+    a.className="q";
+    // PDF dans /pdf/
+    a.href = "./pdf/" + encodeURI(p.name||"") + "#page=" + i;
+    a.target="_blank";
+    a.textContent="Q"+i;
 
     td.appendChild(a);
 
-    // Toggle coloriage au clic sur la cellule (pas besoin d’ouvrir le PDF)
-    td.addEventListener("click", (ev)=>{
-      // si l'utilisateur clique pile sur le lien, il va ouvrir le PDF, on garde aussi le toggle
-      const q = i;
+    td.addEventListener("click", ()=>{
+      const q=i;
       if(state.includes(q)) state = state.filter(x=>x!==q);
       else state.push(q);
       localStorage.setItem(stateKey, JSON.stringify(state));
@@ -136,14 +114,15 @@ function buildForPdf(p){
   return container;
 }
 
-const mount = document.getElementById("mount");
+const mount=document.getElementById("mount");
 if(!pdfs.length){
-  mount.innerHTML = `<div class="empty">Aucun PDF pour cette classe.<br>Ajoute des PDF depuis l’accueil (ou restaure une sauvegarde).</div>`;
+  mount.innerHTML = `<div class="empty">
+    Aucun PDF pour cette classe.<br>
+    Va sur l’accueil → “Actualiser la liste des PDF (GitHub)”.
+  </div>`;
 } else {
-  pdfs
-    .slice()
-    .sort((a,b)=>prettyTitle(a).localeCompare(prettyTitle(b),"fr"))
-    .forEach(p=>mount.appendChild(buildForPdf(p)));
+  pdfs.slice().sort((a,b)=>prettyTitle(a).localeCompare(prettyTitle(b),"fr"))
+      .forEach(p=>mount.appendChild(buildForPdf(p)));
 }
 </script>
 </body>
