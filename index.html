@@ -6,26 +6,40 @@
 <title>Questions rapides – Accueil</title>
 <link rel="stylesheet" href="style.css">
 <style>
-  :root{--bg:#000;--panel:#111;--border:#2a2a2a;--text:#f5f5f5;--muted:#a7a7a7;--btn:#1b1b1b;--btn2:#232323}
+  :root{
+    --bg:#000; --panel:#111; --border:#2a2a2a; --text:#f5f5f5; --muted:#a7a7a7;
+    --btn:#1b1b1b; --btn2:#232323;
+  }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
   h1{margin:22px 12px 10px;text-align:center;font-size:clamp(26px,3.6vw,44px)}
   .wrap{max-width:1100px;margin:0 auto;padding:14px}
   .panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
-  .btn,a.btn{display:block;width:100%;background:var(--btn);border:1px solid var(--border);color:var(--text);padding:12px;border-radius:12px;text-align:center;text-decoration:none;cursor:pointer;font-weight:650}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+  .btn,a.btn{
+    display:block;width:100%;
+    background:var(--btn);border:1px solid var(--border);color:var(--text);
+    padding:12px 12px;border-radius:12px;text-align:center;text-decoration:none;
+    cursor:pointer;font-weight:650
+  }
   .btn:hover,a.btn:hover{background:var(--btn2)}
   .note{color:var(--muted);font-size:14px;margin-top:10px;text-align:center;line-height:1.4}
   .classes{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:16px}
-  .chip{background:var(--btn);border:1px solid var(--border);border-radius:14px;padding:12px 18px;color:var(--text);text-decoration:none;font-weight:750}
+  .chip{
+    background:var(--btn);border:1px solid var(--border);border-radius:14px;
+    padding:12px 18px;color:var(--text);text-decoration:none;font-weight:750
+  }
   .chip:hover{background:var(--btn2)}
   details{margin-top:14px}
   summary{cursor:pointer;font-weight:800}
   .row{display:grid;grid-template-columns:1fr 110px 320px;gap:8px;align-items:center;margin:8px 0}
   .row.header{color:var(--muted);font-weight:800}
-  input[type=text],select{width:100%;background:#151515;border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px;font-size:16px}
+  input[type=text],select{
+    width:100%;background:#151515;border:1px solid var(--border);color:var(--text);
+    border-radius:10px;padding:10px 10px;font-size:16px
+  }
   .actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-  .small{padding:10px;border-radius:12px;font-size:14px}
+  .small{padding:10px 10px;border-radius:12px;font-size:14px}
   .danger{border-color:#3a1e1e;background:#221111}
   .danger:hover{background:#2b1515}
   .warn{border-color:#3a2a1e;background:#222011}
@@ -40,18 +54,16 @@
 <div class="wrap">
   <div class="panel">
     <div class="grid">
-      <button class="btn" id="btnRefresh">🔄 Actualiser la liste des PDF (GitHub)</button>
-      <button class="btn warn" id="btnResetAll">🧹 Effacer coloriages (tout)</button>
+      <button class="btn" id="btnRefreshPdfs">🔄 Actualiser la liste des PDF (GitHub)</button>
+      <button class="btn" id="btnRestoreGitHub">🔄 Restaurer depuis GitHub</button>
       <button class="btn" id="btnBackup">💾 Sauvegarder (JSON)</button>
-      <button class="btn" id="btnRestore">📥 Restaurer sauvegarde</button>
+      <button class="btn warn" id="btnResetAll">🧹 Effacer coloriages (tout)</button>
       <a class="btn" href="aide.html" target="_blank">ℹ️ Aide</a>
     </div>
 
-    <input id="fileRestore" type="file" accept=".json" style="display:none">
-
     <div class="note">
-      Les PDF sont servis depuis GitHub : dossier <code>pdf/</code> + liste <code>pdfs.json</code>.<br>
-      Tri auto par niveau via le suffixe : <code>(5 4)</code>, <code>(3)</code>, etc.
+      Les PDF doivent être dans le dossier <code>pdf/</code> du dépôt + référencés dans <code>pdfs.json</code>.<br>
+      Tri automatique par niveau via le suffixe : <code>(5 4)</code>, <code>(3)</code>, etc.
     </div>
 
     <details open>
@@ -78,6 +90,10 @@
           <button class="btn small" id="btnClearClass">↺ Vider</button>
         </div>
       </div>
+
+      <div class="note" style="margin-top:8px">
+        Si une classe n’a pas de niveau (—), elle verra tous les PDF.
+      </div>
     </details>
   </div>
 
@@ -86,11 +102,14 @@
 </div>
 
 <script>
-const STORAGE_PDFS    = "qr_pdfs_index_v3";
-const STORAGE_CLASSES = "qr_classes_v3";
-const STATE_PREFIX    = "qr_state_v3_";
+/* ======================
+   Stockage (v3)
+====================== */
+const STORAGE_PDFS     = "qr_pdfs_index_v3";
+const STORAGE_CLASSES  = "qr_classes_v3";
+const STATE_PREFIX     = "qr_state_v3_";
 
-const $ = s => document.querySelector(s);
+const $ = (s)=>document.querySelector(s);
 function load(k, def){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):def; }catch{ return def; } }
 function save(k, v){ localStorage.setItem(k, JSON.stringify(v)); }
 
@@ -107,6 +126,9 @@ function ensureDefaults(){
   return classes;
 }
 
+/* ======================
+   Helpers PDF
+====================== */
 function inferLevelsFromFilename(filename){
   const m = filename.match(/\(([^)]+)\)\.pdf$/i);
   if(!m) return [];
@@ -116,18 +138,27 @@ function parseTitle(filename){
   return filename.replace(/\s*\([^)]*\)\.pdf$/i,"").replace(/\.pdf$/i,"").trim();
 }
 
+/* ======================
+   Rendu classes
+====================== */
 function renderClassChips(){
-  const wrap=$("#classes"); wrap.innerHTML="";
-  for(const c of ensureDefaults()){
+  const wrap = $("#classes");
+  wrap.innerHTML = "";
+  const classes = ensureDefaults();
+
+  for(const c of classes){
     const lv = [6,5,4,3].includes(c.level) ? c.level : "";
-    const a=document.createElement("a");
-    a.className="chip";
-    a.href=`classe.html?c=${encodeURIComponent(c.name)}&lv=${encodeURIComponent(lv)}`;
-    a.textContent=c.name + (lv?` (${lv}e)`:"");
+    const a = document.createElement("a");
+    a.className = "chip";
+    a.href = `classe.html?c=${encodeURIComponent(c.name)}&lv=${encodeURIComponent(lv)}`;
+    a.textContent = c.name + (lv ? ` (${lv}e)` : "");
     wrap.appendChild(a);
   }
 }
 
+/* ======================
+   Gestion classes
+====================== */
 function resetClassStates(className){
   const prefix = STATE_PREFIX + encodeURIComponent(className) + "_";
   for(const k of Object.keys(localStorage)){
@@ -136,187 +167,232 @@ function resetClassStates(className){
 }
 
 function renderManager(){
-  const rows=$("#rows"); rows.innerHTML="";
-  const classes=ensureDefaults();
+  const rows = $("#rows");
+  rows.innerHTML = "";
+  const classes = ensureDefaults();
 
-  classes.forEach((c,idx)=>{
-    const row=document.createElement("div"); row.className="row";
+  classes.forEach((c, idx)=>{
+    const row = document.createElement("div");
+    row.className = "row";
 
-    const name=document.createElement("input");
-    name.type="text"; name.value=c.name;
+    const name = document.createElement("input");
+    name.type = "text";
+    name.value = c.name;
 
-    const level=document.createElement("select");
-    level.innerHTML=`
+    const level = document.createElement("select");
+    level.innerHTML = `
       <option value="">—</option>
       <option value="6">6e</option>
       <option value="5">5e</option>
       <option value="4">4e</option>
-      <option value="3">3e</option>`;
-    if([6,5,4,3].includes(c.level)) level.value=String(c.level);
+      <option value="3">3e</option>
+    `;
+    if([6,5,4,3].includes(c.level)) level.value = String(c.level);
 
-    const acts=document.createElement("div"); acts.className="actions";
+    const acts = document.createElement("div");
+    acts.className = "actions";
 
-    const bSave=document.createElement("button");
-    bSave.className="btn small";
-    bSave.textContent="💾 Enregistrer";
-    bSave.onclick=()=>{
-      const arr=ensureDefaults();
-      const oldName=c.name;
-      const newName=name.value.trim()||oldName;
+    const bSave = document.createElement("button");
+    bSave.className = "btn small";
+    bSave.textContent = "💾 Enregistrer";
+    bSave.onclick = ()=>{
+      const arr = ensureDefaults();
+      const oldName = c.name;
+      const newName = name.value.trim() || oldName;
 
-      if(newName!==oldName){
-        const oldPref=STATE_PREFIX+encodeURIComponent(oldName)+"_";
-        const newPref=STATE_PREFIX+encodeURIComponent(newName)+"_";
+      // Renommer les clés d'état si le nom change
+      if(newName !== oldName){
+        const oldPref = STATE_PREFIX + encodeURIComponent(oldName) + "_";
+        const newPref = STATE_PREFIX + encodeURIComponent(newName) + "_";
         for(const k of Object.keys(localStorage)){
           if(k.startsWith(oldPref)){
-            const v=localStorage.getItem(k);
+            const v = localStorage.getItem(k);
             localStorage.removeItem(k);
             localStorage.setItem(newPref + k.slice(oldPref.length), v);
           }
         }
       }
 
-      arr[idx]={name:newName, level: level.value?parseInt(level.value,10):null};
-      save(STORAGE_CLASSES,arr);
-      renderManager(); renderClassChips();
+      arr[idx] = { name: newName, level: level.value ? parseInt(level.value,10) : null };
+      save(STORAGE_CLASSES, arr);
+      renderManager();
+      renderClassChips();
     };
 
-    const bClr=document.createElement("button");
-    bClr.className="btn small warn";
-    bClr.textContent="🧹 Effacer coloriages";
-    bClr.onclick=()=>{
+    const bClr = document.createElement("button");
+    bClr.className = "btn small warn";
+    bClr.textContent = "🧹 Effacer coloriages";
+    bClr.onclick = ()=>{
       if(confirm(`Effacer les coloriages pour ${c.name} ?`)){
         resetClassStates(c.name);
         alert("OK");
       }
     };
 
-    const bDel=document.createElement("button");
-    bDel.className="btn small danger";
-    bDel.textContent="🗑️ Supprimer";
-    bDel.onclick=()=>{
+    const bDel = document.createElement("button");
+    bDel.className = "btn small danger";
+    bDel.textContent = "🗑️ Supprimer";
+    bDel.onclick = ()=>{
       if(confirm(`Supprimer la classe ${c.name} ? (coloriages effacés)`)){
-        const arr=ensureDefaults();
+        const arr = ensureDefaults();
         resetClassStates(c.name);
-        arr.splice(idx,1);
-        save(STORAGE_CLASSES,arr);
-        renderManager(); renderClassChips();
+        arr.splice(idx, 1);
+        save(STORAGE_CLASSES, arr);
+        renderManager();
+        renderClassChips();
       }
     };
 
-    acts.append(bSave,bClr,bDel);
-    row.append(name,level,acts);
+    acts.append(bSave, bClr, bDel);
+    row.append(name, level, acts);
     rows.appendChild(row);
   });
 }
 
-/* ===== Charger les PDF depuis GitHub (pdfs.json) ===== */
-async function refreshPdfs(){
+/* ======================
+   PDF list depuis GitHub (pdfs.json)
+====================== */
+async function refreshPdfsFromGitHub(){
   try{
-    // anti-cache simple (utile sur iPad)
-    const res = await fetch("./pdfs.json?ts=" + Date.now(), {cache:"no-store"});
+    const res = await fetch("./pdfs.json?ts=" + Date.now(), { cache:"no-store" });
     if(!res.ok) throw new Error("HTTP " + res.status);
+
     const list = await res.json();
     if(!Array.isArray(list)) throw new Error("pdfs.json invalide");
 
     const normalized = list.map(item=>{
       const name = String(item.name || "").trim();
       if(!name) return null;
+
       const pages = Number.isFinite(+item.pages) ? Math.max(1, parseInt(item.pages,10)) : null;
       const levels = Array.isArray(item.levels) ? item.levels : inferLevelsFromFilename(name);
-      const title = item.title ? String(item.title) : parseTitle(name);
-      return {name, pages, levels, title};
+      const title  = item.title ? String(item.title) : parseTitle(name);
+
+      return { name, pages, levels, title };
     }).filter(Boolean);
 
     save(STORAGE_PDFS, normalized);
     alert(`Liste PDF chargée ✅ (${normalized.length})`);
   }catch(e){
     console.error(e);
-    alert("Impossible de charger pdfs.json. Vérifie qu’il est à la racine du dépôt.");
+    alert("Impossible de charger pdfs.json.\nVérifie qu’il est à la racine du dépôt et que le JSON est valide.");
   }
 }
 
-$("#btnRefresh").onclick = refreshPdfs;
+$("#btnRefreshPdfs").onclick = refreshPdfsFromGitHub;
 
-/* ===== Sauvegarde / restauration (v3) ===== */
+/* ======================
+   Sauvegarde (download JSON)
+====================== */
 function makePayload(){
   const classes = load(STORAGE_CLASSES, []);
   const pdfs    = load(STORAGE_PDFS, []);
   const states  = {};
+
   for(const k of Object.keys(localStorage)){
     if(k.startsWith(STATE_PREFIX)) states[k] = localStorage.getItem(k);
   }
-  return { meta:{app:"QuestionsRapides",version:3,savedAt:new Date().toISOString()}, classes, pdfs, states };
+
+  return {
+    meta: { app:"QuestionsRapides", version:3, savedAt: new Date().toISOString() },
+    classes,
+    pdfs,
+    states
+  };
 }
 
-$("#btnBackup").onclick=()=>{
-  const blob=new Blob([JSON.stringify(makePayload(),null,2)],{type:"application/json"});
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download="QR_backup.json";
+$("#btnBackup").onclick = ()=>{
+  const blob = new Blob([JSON.stringify(makePayload(), null, 2)], { type:"application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "QR_backup.json";
   document.body.appendChild(a);
   a.click();
-  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 0);
 };
 
-$("#btnRestore").onclick=()=>$("#fileRestore").click();
-$("#fileRestore").onchange=async (ev)=>{
-  const f = ev.target.files?.[0]; if(!f) return;
+/* ======================
+   Restaurer depuis GitHub (QR_backup.json)
+====================== */
+$("#btnRestoreGitHub").onclick = async ()=>{
+  if(!confirm("Restaurer depuis GitHub ?\nLes données locales seront remplacées.")) return;
+
   try{
-    const data = JSON.parse(await f.text());
-    if(!data?.meta || data.meta.app!=="QuestionsRapides") throw new Error("bad");
+    const res = await fetch("./QR_backup.json?ts=" + Date.now(), { cache:"no-store" });
+    if(!res.ok) throw new Error("HTTP " + res.status);
+
+    const data = await res.json();
+    if(!data?.meta || data.meta.app !== "QuestionsRapides") throw new Error("JSON incompatible");
+
     if(Array.isArray(data.classes)) save(STORAGE_CLASSES, data.classes);
     if(Array.isArray(data.pdfs))    save(STORAGE_PDFS, data.pdfs);
 
+    // purge anciens états
     for(const k of Object.keys(localStorage)){
       if(k.startsWith(STATE_PREFIX)) localStorage.removeItem(k);
     }
-    if(data.states && typeof data.states==="object"){
+
+    // restaurer états
+    if(data.states && typeof data.states === "object"){
       for(const [k,v] of Object.entries(data.states)){
         if(k.startsWith(STATE_PREFIX)) localStorage.setItem(k, v);
       }
     }
-    alert("Restauré ✅");
-    renderManager(); renderClassChips();
-  }catch{
-    alert("Sauvegarde incompatible.");
-  }finally{
-    ev.target.value="";
+
+    alert("Sauvegarde GitHub restaurée ✅");
+    renderManager();
+    renderClassChips();
+  }catch(e){
+    console.error(e);
+    alert("Impossible de restaurer depuis GitHub.\nVérifie QR_backup.json à la racine du dépôt.");
   }
 };
 
-$("#btnResetAll").onclick=()=>{
-  if(!confirm("Effacer TOUS les coloriages ?")) return;
+/* ======================
+   Effacer tous les coloriages
+====================== */
+$("#btnResetAll").onclick = ()=>{
+  if(!confirm("Effacer TOUS les coloriages (toutes classes) ?")) return;
   for(const k of Object.keys(localStorage)){
     if(k.startsWith(STATE_PREFIX)) localStorage.removeItem(k);
   }
   alert("OK");
 };
 
-/* Ajouter classe */
-$("#btnAddClass").onclick=()=>{
-  const name=$("#newName").value.trim();
-  const lv=$("#newLevel").value ? parseInt($("#newLevel").value,10) : null;
-  if(!name) return alert("Nom requis");
-  const arr=ensureDefaults();
-  if(arr.some(x=>x.name.toLowerCase()===name.toLowerCase())) return alert("Déjà existante");
-  arr.push({name, level:lv});
-  save(STORAGE_CLASSES,arr);
-  $("#newName").value=""; $("#newLevel").value="";
-  renderManager(); renderClassChips();
-};
-$("#btnClearClass").onclick=()=>{ $("#newName").value=""; $("#newLevel").value=""; };
+/* ======================
+   Ajouter classe
+====================== */
+$("#btnAddClass").onclick = ()=>{
+  const name = $("#newName").value.trim();
+  const lv   = $("#newLevel").value ? parseInt($("#newLevel").value,10) : null;
 
-/* Init */
+  if(!name){ alert("Nom de classe requis."); return; }
+
+  const arr = ensureDefaults();
+  if(arr.some(x=>x.name.toLowerCase() === name.toLowerCase())){
+    alert("Cette classe existe déjà.");
+    return;
+  }
+
+  arr.push({ name, level: lv });
+  save(STORAGE_CLASSES, arr);
+  $("#newName").value = "";
+  $("#newLevel").value = "";
+  renderManager();
+  renderClassChips();
+};
+
+$("#btnClearClass").onclick = ()=>{
+  $("#newName").value = "";
+  $("#newLevel").value = "";
+};
+
+/* ======================
+   Init
+====================== */
 ensureDefaults();
 renderManager();
 renderClassChips();
-
-// Optionnel : auto-charger pdfs.json au premier lancement si aucune liste
-if(load(STORAGE_PDFS, []).length===0){
-  // décommente si tu veux charger automatiquement sans bouton :
-  // refreshPdfs();
-}
 </script>
 </body>
 </html>
