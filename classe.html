@@ -1,131 +1,94 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Questions rapides – Classe</title>
 <link rel="stylesheet" href="style.css">
+
 <style>
-h1{font-size:clamp(26px,4vw,48px);margin:20px 0;text-align:center;text-shadow:0 0 8px rgba(0,0,0,.4)}
-.container{margin:0 auto;padding:20px;max-width:95%}
-.back-btn{position:fixed;top:20px;left:20px;background:rgba(0,0,0,.25);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:10px 18px;text-decoration:none;font-weight:600;font-size:16px;z-index:1000;transition:background .2s,border-color .2s,transform .06s}
-.back-btn:hover{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.35)}
-.back-btn:active{transform:translateY(1px)}
-.table-wrap{overflow-x:auto;margin-top:20px;border:1px solid rgba(255,255,255,.25);border-radius:12px;background:rgba(0,0,0,.15);padding:10px}
-table{border-collapse:collapse;min-width:1800px;margin:0 auto}
-td{border-right:1px solid rgba(255,255,255,.2);border-bottom:1px solid rgba(255,255,255,.2);padding:10px;text-align:center;min-width:54px;background:rgba(0,0,0,.08)}
-a{color:#c4ffd1;text-decoration:none;font-weight:700}
-td.done{background:rgba(17,43,22,.7)}
-td.done a{color:#2ecc71}
-h2{text-align:center;margin:6px 0 10px}
+body{
+  margin:0;
+  background:#000;
+  color:#fff;
+  font-family:"Comic Sans MS","Segoe UI",system-ui,Arial,sans-serif;
+}
+h1{text-align:center;margin:20px 0}
+.back{
+  position:fixed;
+  top:16px;
+  left:16px;
+  background:#1c1c1c;
+  padding:10px 16px;
+  border-radius:10px;
+  border:1px solid #2a2a2a;
+  text-decoration:none;
+  color:#fff;
+}
+.wrap{padding:20px}
+table{border-collapse:collapse;margin:auto}
+td{
+  border:1px solid #333;
+  padding:10px;
+  text-align:center;
+}
+td.done{background:#114d22}
+a{color:#c4ffd1;font-weight:bold;text-decoration:none}
 </style>
 </head>
+
 <body>
-  <a href="index.html" class="back-btn">⬅ Accueil</a>
-  <div class="container">
-    <h1 id="classTitle">Classe</h1>
-    <div class="table-wrap" id="tableWrap"></div>
-  </div>
+<a class="back" href="index.html">⬅ Accueil</a>
+<h1 id="title"></h1>
+<div class="wrap" id="content"></div>
 
 <script>
-// ===== Utilitaires stockage =====
-const STORAGE_PDFS = "qr_pdfs_index_v3";
-const STORAGE_STATE_PREFIX = "qr_state_v3_";
-function load(k, def=[]) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch { return def; } }
+const params=new URLSearchParams(location.search);
+const CLASS=params.get("c");
+const LV=parseInt(params.get("lv"),10);
+document.getElementById("title").textContent=CLASS;
 
-// ===== Lecture des paramètres =====
-const params = new URLSearchParams(location.search);
-const CLASS_NAME = params.get("c") || "Classe";
-const LV_RAW = params.get("lv");
-const CLASS_LV = Number.isFinite(parseInt(LV_RAW,10)) ? parseInt(LV_RAW,10) : null;
-document.getElementById("classTitle").textContent = CLASS_NAME;
+const pdfs=JSON.parse(localStorage.getItem("qr_pdfs_v1")||"[]");
 
-// ===== Déduction des niveaux depuis le nom du fichier =====
-function inferLevelsFromName(filename){
-  const m = filename && filename.match(/\(([^)]+)\)\.pdf$/i);
-  if(!m) return [];
-  return m[1].split(/\s+/).map(s=>parseInt(s,10)).filter(n=>[6,5,4,3].includes(n));
-}
+function build(pdf){
+  const max=Math.min(100,pdf.pages||100);
+  const table=document.createElement("table");
+  const tr=document.createElement("tr");
 
-// ===== Chargement + filtre robuste =====
-const allPdfs = load(STORAGE_PDFS, []);
-const pdfs = allPdfs.filter(p => {
-  if (CLASS_LV === null) return true;
-  const lvArr = (p.levels && p.levels.length ? p.levels : inferLevelsFromName(p.name)) || [];
-  if (!lvArr.length) return true;
-  return lvArr.includes(CLASS_LV);
-});
+  const key="qr_state_"+CLASS+"_"+pdf.name;
+  let state=JSON.parse(localStorage.getItem(key)||"[]");
 
-// ===== Construction des lignes (jusqu’à 100 questions) =====
-function buildRow(pdf){
-  const maxQ = Math.min(100, Math.max(1, pdf.pages || 100));
-  const table = document.createElement("table");
-  const tr = document.createElement("tr");
+  for(let i=1;i<=max;i++){
+    const td=document.createElement("td");
+    td.textContent="Q"+i;
+    if(state.includes(i)) td.classList.add("done");
 
-  for(let i=1;i<=maxQ;i++){
-    const td = document.createElement("td");
-    td.dataset.q = i;
-    const a = document.createElement("a");
+    td.onclick=()=>{
+      if(state.includes(i)) state=state.filter(x=>x!==i);
+      else state.push(i);
+      localStorage.setItem(key,JSON.stringify(state));
+      td.classList.toggle("done");
+    };
 
-    // ✅ IMPORTANT iPad/Chrome : encode les espaces/parenthèses du nom de fichier
-    a.href = encodeURI(pdf.name) + "#page=" + i;
-
-    a.target = "_blank";
-    a.textContent = "Q" + i;
+    const a=document.createElement("a");
+    a.href=encodeURI(pdf.name)+"#page="+i;
+    a.target="_blank";
+    a.textContent="Q"+i;
+    td.innerHTML="";
     td.appendChild(a);
     tr.appendChild(td);
   }
+
   table.appendChild(tr);
-
-  const stateKey = STORAGE_STATE_PREFIX + CLASS_NAME + "_" + encodeURIComponent(pdf.name);
-  let state = [];
-  try{ state = JSON.parse(localStorage.getItem(stateKey)) || []; }catch{}
-
-  function apply(){
-    for(let i=1;i<=maxQ;i++){
-      const td = table.querySelector('td[data-q="'+i+'"]');
-      if(!td) continue;
-      td.classList.toggle("done", state.includes(i));
-    }
-  }
-  apply();
-
-  table.addEventListener("click", ev=>{
-    const td = ev.target.closest("td[data-q]");
-    if(!td) return;
-    const q = parseInt(td.dataset.q,10);
-    if(state.includes(q)) state = state.filter(x=>x!==q);
-    else state.push(q);
-    localStorage.setItem(stateKey, JSON.stringify(state));
-    td.classList.toggle("done");
-  });
-
-  const wrap = document.createElement("div");
-  wrap.className = "row-wrap";
-  const title = document.createElement("h2");
-  title.textContent = pdf.title || (pdf.name ? pdf.name.replace(/\s*\([^)]*\)\.pdf$/i,'').replace(/\.pdf$/i,'') : "Sans titre");
-  wrap.appendChild(title);
-  wrap.appendChild(table);
-  return wrap;
+  const h=document.createElement("h2");
+  h.textContent=pdf.name.replace(/\.pdf$/i,"");
+  const div=document.createElement("div");
+  div.append(h,table);
+  return div;
 }
 
-// ===== Rendu =====
-const mount = document.getElementById("tableWrap");
-if(!pdfs.length){
-  mount.innerHTML = "<p>Aucun PDF pour cette classe. Ajoute/scanne des PDF sur la page d’accueil.</p>";
-} else {
-  pdfs.sort((a,b)=> (a.title||"").localeCompare(b.title||"", "fr"));
-  const byTitle = new Map();
-  for(const p of pdfs){
-    const key = (p.title && p.title.trim()) || (p.name ? p.name.replace(/\s*\([^)]*\)\.pdf$/i,'').replace(/\.pdf$/i,'') : "Sans titre");
-    if(!byTitle.has(key)) byTitle.set(key, []);
-    byTitle.get(key).push(p);
-  }
-  for(const [title,list] of byTitle.entries()){
-    for(const pdf of list){
-      mount.appendChild(buildRow(pdf));
-    }
-  }
-}
+const c=document.getElementById("content");
+pdfs.forEach(p=>c.appendChild(build(p)));
 </script>
 </body>
 </html>
